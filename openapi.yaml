@@ -4,7 +4,8 @@ info:
   version: 1.0.0
   description: API REST para gestionar autores, posts y comentarios
 servers:
-  - url: http://localhost:3000
+  - url: https://proyectom2-richard-anderson-gonzalez-cantillo-production.up.railway.app/api
+    
 paths:
   /api/authors:
     get:

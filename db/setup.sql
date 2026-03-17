@@ -33,3 +33,4 @@ CREATE TABLE comments (
   FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
   FOREIGN KEY (author_id) REFERENCES authors(id) ON DELETE CASCADE
 );
+
