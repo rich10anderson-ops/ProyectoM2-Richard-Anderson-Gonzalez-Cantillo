@@ -30,7 +30,7 @@ describe('Authors API', () => {
   test('POST /api/authors valida email duplicado', async () => {
     const res = await request(app).post('/api/authors').send({
       name: 'Nuevo',
-      email: 'ana@example.com',
+      email: 'rixar@example.com',
       bio: 'dup',
     });
     expect(res.status).toBe(409);
