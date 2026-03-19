@@ -1,5 +1,5 @@
 INSERT INTO authors (name, email, bio) VALUES
-  ('Ana Garcia', 'ana@example.com', 'Full-stack dev fan de Node.js'),
+  ('Richard Gonzalez', 'rixar@example.com', 'Fan del America de Cali-enamorado del desarrollo pupilo de Node.js'),
   ('Carlos Ruiz', 'carlos@example.com', 'Escritor tecnico y DBA'),
   ('Maria Lopez', 'maria@example.com', 'Ingeniera de software en APIs REST');
 
