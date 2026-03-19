@@ -32,6 +32,28 @@ API REST para autores, posts y comentarios con Node.js + Express. Incluye esquem
   - Swagger UI: iniciar la app y abrir `http://localhost:3000/api-docs`.
   - O bien `npx redoc-cli serve openapi.yaml`.
 
+## Diagramas
+- Arquitectura (client → API → servicios → PostgreSQL):  
+  ![Arquitectura](docs/img/architecture.svg)
+- Flujo de request/errores:  
+  ![Flujo de request](docs/img/request-flow.svg)
+
+## Documentacion uso AI:
+
+  <img src="docs/img/captura 1.png" alt="Ejemplo  de como no fallar con request" width="720" />
+  <!-- Comentarios aquí -->
+Utilizados los conceptos
+
+  <img src="docs/img/captura 2.png" alt="Consulta, manejo de errores" width="720" />
+  <!-- Comentarios aquí -->
+Se le pregunta a la IA por los procesos de manejo de errores 
+ 
+  <img src="docs/img/captura 3.png" alt="Para que sirve el RETURNING" width="720" />
+  <!-- Comentarios aquí -->
+ Acentuando los conceptos
+  <img src="docs/img/captura 4.png" alt="" width="720" />
+  <!-- Comentarios aquí -->
+
 ## Deployment en Railway
 1) Crear proyecto en Railway y añadir servicio PostgreSQL.
 2) Variables en el servicio Node:
