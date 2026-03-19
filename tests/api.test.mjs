@@ -1,49 +1,67 @@
 import request from 'supertest';
-import { describe, test, expect, beforeEach, vi } from 'vitest';
-import pool from '../db/config.js';
+import { beforeEach, afterEach, describe, test, expect, vi } from 'vitest';
+import { createTestPool } from './test-db.js';
 
-// mock pg pool before loading app/routes
-pool.query = vi.fn();
+let app;
+let pool;
 
-import app from '../server.js';
+beforeEach(async () => {
+  vi.resetModules();
+  const { pool: testPool } = createTestPool();
+  pool = testPool;
+  global.__TEST_POOL__ = pool;
+  const mod = await import('../server.js');
+  app = mod.default || mod;
+});
 
-beforeEach(() => {
-  pool.query.mockReset();
+afterEach(async () => {
+  await pool?.end();
+  delete global.__TEST_POOL__;
 });
 
 describe('Authors API', () => {
-  test.skip('GET /api/authors devuelve lista', async () => {
-    pool.query.mockResolvedValueOnce({ rows: [{ id: 1, name: 'Ana' }] });
-
+  test('GET /api/authors devuelve los seed', async () => {
     const res = await request(app).get('/api/authors');
-
     expect(res.status).toBe(200);
-    expect(res.body).toEqual([{ id: 1, name: 'Ana' }]);
-    expect(pool.query).toHaveBeenCalledWith('SELECT * FROM authors ORDER BY id');
+    expect(res.body).toHaveLength(3);
+    expect(res.body[0]).toHaveProperty('email');
+  });
+
+  test('POST /api/authors valida email duplicado', async () => {
+    const res = await request(app).post('/api/authors').send({
+      name: 'Nuevo',
+      email: 'ana@example.com',
+      bio: 'dup',
+    });
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/ya existe/i);
   });
 });
 
 describe('Posts API', () => {
-  test.skip('GET /api/posts?published=true filtra publicados', async () => {
-    pool.query.mockResolvedValueOnce({ rows: [{ id: 7, published: true }] });
-
+  test('GET /api/posts?published=true filtra publicados', async () => {
     const res = await request(app).get('/api/posts?published=true');
-
     expect(res.status).toBe(200);
-    expect(res.body).toEqual([{ id: 7, published: true }]);
-    expect(pool.query).toHaveBeenCalledWith(
-      'SELECT * FROM posts WHERE published =  ORDER BY id',
-      [true],
-    );
+    expect(res.body.every((p) => p.published)).toBe(true);
+  });
+
+  test('POST /api/posts requiere campos', async () => {
+    const res = await request(app).post('/api/posts').send({ title: 'x' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/content/i);
   });
 });
 
 describe('Comments API', () => {
-  test.skip('POST /api/comments requiere post_id, author_id, body', async () => {
+  test('POST /api/comments requiere campos', async () => {
     const res = await request(app).post('/api/comments').send({ body: 'hola' });
-
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/post_id/);
-    expect(pool.query).not.toHaveBeenCalled();
+  });
+
+  test('PUT /api/comments/:id valida id numerico', async () => {
+    const res = await request(app).put('/api/comments/abc').send({ body: 'edit' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/entero/);
   });
 });

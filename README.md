@@ -1,48 +1,45 @@
 # Blog API (Express + PostgreSQL)
 
-API REST sencilla para gestionar autores, posts y comentarios con Node.js, Express y PostgreSQL. Pensada para correr en local y desplegar en Railway.
+API REST para autores, posts y comentarios con Node.js + Express. Incluye esquema PostgreSQL, validaciones sólidas, manejo centralizado de errores y tests con Vitest + Supertest (base en memoria con `pg-mem`).
 
 ## Requisitos
 - Node.js 18+
-- PostgreSQL accesible (local o servicio gestionado)
+- PostgreSQL accesible (local o servicio gestionado como Railway)
 
-## Configuracion
-1. Clona el repo y copia `.env.example` a `.env` con tus valores de DB.
-2. Instala dependencias: `npm install`.
-3. Prepara la base: `npm run db:setup` (ejecuta `db/setup.sql` y `db/seed.sql`).
+## Configuración local
+1) Clonar y crear `.env` a partir de `.env.example`.
+   - Opción 1: `DATABASE_URL=postgres://user:pass@host:5432/db`
+   - Opción 2: variables sueltas `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`.
+2) Instalar dependencias: `npm install`.
+3) Preparar base (crea tablas + seed): `npm run db:setup`.
+   - Para una base de pruebas separada: crea `.env.test` y ejecuta `npm run db:test`.
+4) Levantar:
+   - Prod/local: `npm start` (usa `PORT`, por defecto 3000).
+   - Dev con recarga: `npm run dev`.
 
-## Ejecutar
-- Produccion/local: `npm start` (escucha en `PORT`, por defecto 3000).
-- Dev con recarga: `npm run dev` (Node --watch).
-
-Endpoints base:
-- `GET /` salud y links.
-- CRUD `/api/authors`, `/api/posts`, `/api/comments` (ver `openapi.yaml`).
+## Endpoints
+- `/` ping con links.
+- CRUD `/api/authors`, `/api/posts`, `/api/comments`.
+- Errores JSON consistentes `{ error, code? }`, status 400/404/409/500 según el caso.
 
 ## Tests
-- Ejecuta `npm test`.
-- En Windows, si falla por permisos: `Set-ExecutionPolicy -Scope Process RemoteSigned` o usa WSL.
+- Ejecutar: `npm test`.
+- No requiere PostgreSQL: los tests usan `pg-mem` en memoria e inyectan el pool en la app.
 
 ## OpenAPI
-- Archivo: `openapi.yaml`.
-- Puedes abrirlo en https://editor.swagger.io o con `npx redoc-cli serve openapi.yaml`.
+- Archivo: `openapi.yaml` (incluye códigos 400/404/409 y esquemas de error `{ error, code? }`).
+- Visualizar:
+  - Swagger UI: iniciar la app y abrir `http://localhost:3000/api-docs`.
+  - O bien `npx redoc-cli serve openapi.yaml`.
 
-## Deployment en Railway (paso a paso)
-1. Crear proyecto + servicio Postgres en Railway.
-2. Añadir servicio Node con este repo.
-3. Variables de entorno (Railway): `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `PORT`.
-   - `DB_HOST`: internal host del servicio Postgres.
-   - `DB_PORT`: 5432.
-   - `DB_NAME/USER/PASSWORD`: credenciales de Postgres.
-   - `PORT`: 3000 (Railway inyecta, usa fallback en server).
-4. Deploy: Railway builda y ejecuta `npm start`.
-5. Internal URL: usada entre servicios dentro de Railway.
-6. Public URL: la que expones a clientes (habilita dominio publico en Railway).
-
-## Estructura
-- `server.js` arranca la app y monta rutas.
-- `routes/authors.js`, `routes/posts.js`, `routes/comments.js` CRUD con pg.
-- `db/setup.sql`, `db/seed.sql`, `db/run-sql.js` (setup/seed).
-- `src/validators.js` validaciones basicas.
-- `tests/*.test.js` unitarios + API con supertest.
-- `openapi.yaml` especificacion.
+## Deployment en Railway
+1) Crear proyecto en Railway y añadir servicio PostgreSQL.
+2) Variables en el servicio Node:
+   - `DATABASE_URL` (recomendado) **o** (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`).
+   - `PORT` (Railway la inyecta; deja fallback 3000).
+   - Si Railway exige SSL, dejar por defecto (usa `rejectUnauthorized: false` con `DATABASE_URL`). Para desactivar SSL: `PGSSLMODE=disable`.
+3) Ejecutar migraciones/seed en Railway: `railway run npm run db:setup`.
+4) Deploy: Railway ejecuta `npm start`.
+5) URLs:
+   - Internal URL: usada entre servicios dentro de Railway.
+   - Public URL: expuesta a clientes; habilítala en Railway para servir la API y `/api-docs`.

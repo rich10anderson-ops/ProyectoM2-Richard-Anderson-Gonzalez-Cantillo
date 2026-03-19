@@ -1,11 +1,14 @@
 openapi: 3.0.3
 info:
   title: Blog API
-  version: 1.0.0
-  description: API REST para gestionar autores, posts y comentarios
+  version: 1.1.0
+  description: API REST para gestionar autores, posts y comentarios.
 servers:
-  - url: https://proyectom2-richard-anderson-gonzalez-cantillo-production.up.railway.app/api
-    
+  - url: http://localhost:3000
+    description: Local
+  - url: https://proyectom2-richard-anderson-gonzalez-cantillo-production.up.railway.app
+    description: Railway
+
 paths:
   /api/authors:
     get:
@@ -35,9 +38,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/Author'
         '400':
-          description: Datos invalidos
+          $ref: '#/components/responses/BadRequest'
         '409':
           description: Email duplicado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /api/authors/{id}:
     get:
       summary: Obtener autor por id
@@ -50,8 +58,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Author'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
-          description: No encontrado
+          $ref: '#/components/responses/NotFound'
     put:
       summary: Actualizar autor
       parameters:
@@ -61,7 +71,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AuthorInput'
+              $ref: '#/components/schemas/AuthorUpdate'
       responses:
         '200':
           description: Autor actualizado
@@ -69,8 +79,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Author'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
-          description: No encontrado
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Email duplicado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
     delete:
       summary: Eliminar autor
       parameters:
@@ -78,8 +96,15 @@ paths:
       responses:
         '200':
           description: Eliminado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
-          description: No encontrado
+          $ref: '#/components/responses/NotFound'
+
   /api/posts:
     get:
       summary: Listar posts
@@ -88,6 +113,7 @@ paths:
           name: published
           schema:
             type: boolean
+          description: Filtra por publicados (true/false)
       responses:
         '200':
           description: Lista de posts
@@ -97,6 +123,8 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Post'
+        '400':
+          $ref: '#/components/responses/BadRequest'
     post:
       summary: Crear post
       requestBody:
@@ -113,7 +141,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Post'
         '400':
-          description: Datos invalidos o author_id inexistente
+          $ref: '#/components/responses/BadRequest'
+
   /api/posts/{id}:
     get:
       summary: Obtener post
@@ -126,8 +155,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Post'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
-          description: No encontrado
+          $ref: '#/components/responses/NotFound'
     put:
       summary: Actualizar post
       parameters:
@@ -137,18 +168,18 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PostInput'
+              $ref: '#/components/schemas/PostUpdate'
       responses:
         '200':
-          description: Actualizado
+          description: Post actualizado
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Post'
         '400':
-          description: Datos invalidos
+          $ref: '#/components/responses/BadRequest'
         '404':
-          description: No encontrado
+          $ref: '#/components/responses/NotFound'
     delete:
       summary: Eliminar post
       parameters:
@@ -156,8 +187,15 @@ paths:
       responses:
         '200':
           description: Eliminado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
-          description: No encontrado
+          $ref: '#/components/responses/NotFound'
+
   /api/posts/author/{authorId}:
     get:
       summary: Listar posts por autor
@@ -167,6 +205,7 @@ paths:
           required: true
           schema:
             type: integer
+            minimum: 1
       responses:
         '200':
           description: Lista de posts del autor
@@ -176,6 +215,9 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Post'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
   /api/comments:
     get:
       summary: Listar comentarios
@@ -204,7 +246,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Comment'
         '400':
-          description: post_id o author_id invalidos
+          $ref: '#/components/responses/BadRequest'
+
   /api/comments/{id}:
     get:
       summary: Obtener comentario
@@ -217,8 +260,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Comment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
-          description: No encontrado
+          $ref: '#/components/responses/NotFound'
     put:
       summary: Actualizar comentario
       parameters:
@@ -228,7 +273,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CommentInput'
+              $ref: '#/components/schemas/CommentUpdate'
       responses:
         '200':
           description: Comentario actualizado
@@ -236,8 +281,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Comment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
-          description: No encontrado
+          $ref: '#/components/responses/NotFound'
     delete:
       summary: Eliminar comentario
       parameters:
@@ -245,8 +292,15 @@ paths:
       responses:
         '200':
           description: Eliminado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
-          description: No encontrado
+          $ref: '#/components/responses/NotFound'
+
 components:
   parameters:
     IdParam:
@@ -255,82 +309,107 @@ components:
       required: true
       schema:
         type: integer
+        minimum: 1
+
+  responses:
+    BadRequest:
+      description: Petición inválida (ids no enteros, campos requeridos, tipos incorrectos)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Recurso no encontrado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
   schemas:
+    Message:
+      type: object
+      properties:
+        message:
+          type: string
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+          description: Código de error opcional (ej. CONFLICT)
+
     Author:
       type: object
       properties:
-        id:
-          type: integer
-        name:
-          type: string
-        email:
-          type: string
-          format: email
-        bio:
-          type: string
-        created_at:
-          type: string
-          format: date-time
+        id: { type: integer }
+        name: { type: string, maxLength: 100 }
+        email: { type: string, format: email }
+        bio: { type: string, maxLength: 500 }
+        created_at: { type: string, format: date-time }
+
     AuthorInput:
       type: object
       required: [name, email]
       properties:
-        name:
-          type: string
-        email:
-          type: string
-          format: email
-        bio:
-          type: string
+        name: { type: string, maxLength: 100 }
+        email: { type: string, format: email }
+        bio: { type: string, maxLength: 500 }
+
+    AuthorUpdate:
+      type: object
+      properties:
+        name: { type: string, maxLength: 100 }
+        email: { type: string, format: email }
+        bio: { type: string, maxLength: 500 }
+
     Post:
       type: object
       properties:
-        id:
-          type: integer
-        title:
-          type: string
-        content:
-          type: string
-        author_id:
-          type: integer
-        published:
-          type: boolean
-        created_at:
-          type: string
-          format: date-time
+        id: { type: integer }
+        title: { type: string, maxLength: 200 }
+        content: { type: string, maxLength: 5000 }
+        author_id: { type: integer }
+        published: { type: boolean }
+        created_at: { type: string, format: date-time }
+
     PostInput:
       type: object
       required: [title, content, author_id]
       properties:
-        title:
-          type: string
-        content:
-          type: string
-        author_id:
-          type: integer
-        published:
-          type: boolean
+        title: { type: string, maxLength: 200 }
+        content: { type: string, maxLength: 5000 }
+        author_id: { type: integer }
+        published: { type: boolean }
+
+    PostUpdate:
+      type: object
+      properties:
+        title: { type: string, maxLength: 200 }
+        content: { type: string, maxLength: 5000 }
+        author_id: { type: integer }
+        published: { type: boolean }
+
     Comment:
       type: object
       properties:
-        id:
-          type: integer
-        post_id:
-          type: integer
-        author_id:
-          type: integer
-        body:
-          type: string
-        created_at:
-          type: string
-          format: date-time
+        id: { type: integer }
+        post_id: { type: integer }
+        author_id: { type: integer }
+        body: { type: string, maxLength: 1000 }
+        created_at: { type: string, format: date-time }
+
     CommentInput:
       type: object
       required: [post_id, author_id, body]
       properties:
-        post_id:
-          type: integer
-        author_id:
-          type: integer
-        body:
-          type: string
+        post_id: { type: integer }
+        author_id: { type: integer }
+        body: { type: string, maxLength: 1000 }
+
+    CommentUpdate:
+      type: object
+      properties:
+        body: { type: string, maxLength: 1000 }

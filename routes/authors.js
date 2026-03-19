@@ -1,13 +1,20 @@
 const express = require('express');
-const pool = require('../db/config');
-const { validarEmail } = require('../src/validators');
+const { validarEmail, validarString, validarIdPositivo } = require('../src/validators');
+const { badRequest, notFound } = require('../src/errors');
+const authorsService = require('../src/services/authors');
 
 const router = express.Router();
 
+function parseId(param) {
+  const err = validarIdPositivo(param, 'id');
+  if (err) throw badRequest(err);
+  return Number(param);
+}
+
 router.get('/', async (req, res, next) => {
   try {
-    const { rows } = await pool.query('SELECT * FROM authors ORDER BY id');
-    res.json(rows);
+    const authors = await authorsService.list();
+    res.json(authors);
   } catch (err) {
     next(err);
   }
@@ -15,11 +22,10 @@ router.get('/', async (req, res, next) => {
 
 router.get('/:id', async (req, res, next) => {
   try {
-    const { rows } = await pool.query('SELECT * FROM authors WHERE id = $1', [req.params.id]);
-    if (!rows.length) {
-      return res.status(404).json({ error: 'Autor no encontrado' });
-    }
-    res.json(rows[0]);
+    const id = parseId(req.params.id);
+    const author = await authorsService.findById(id);
+    if (!author) throw notFound('Autor no encontrado');
+    res.json(author);
   } catch (err) {
     next(err);
   }
@@ -28,18 +34,22 @@ router.get('/:id', async (req, res, next) => {
 router.post('/', async (req, res, next) => {
   try {
     const { name, email, bio } = req.body;
-    if (!name) return res.status(400).json({ error: 'El nombre es requerido' });
-    const emailError = validarEmail(email);
-    if (emailError) return res.status(400).json({ error: emailError });
 
-    const { rows } = await pool.query(
-      'INSERT INTO authors (name, email, bio) VALUES ($1, $2, $3) RETURNING *',
-      [name, email, bio || null],
-    );
-    res.status(201).json(rows[0]);
+    const nameErr = validarString(name, 'name', { maxLength: 100 });
+    if (nameErr) throw badRequest(nameErr);
+
+    const emailErr = validarEmail(email);
+    if (emailErr) throw badRequest(emailErr);
+
+    const bioErr = validarString(bio, 'bio', { requerido: false, maxLength: 500 });
+    if (bioErr) throw badRequest(bioErr);
+
+    const created = await authorsService.create({ name: name.trim(), email: email.trim(), bio });
+    res.status(201).json(created);
   } catch (err) {
     if (err.code === '23505') {
-      return res.status(409).json({ error: 'El email ya existe' });
+      err.status = 409;
+      err.message = 'El email ya existe';
     }
     next(err);
   }
@@ -47,41 +57,36 @@ router.post('/', async (req, res, next) => {
 
 router.put('/:id', async (req, res, next) => {
   try {
+    const id = parseId(req.params.id);
     const { name, email, bio } = req.body;
-    if (name === undefined && email === undefined && bio === undefined) {
-      return res.status(400).json({ error: 'No hay campos para actualizar' });
-    }
-    if (email !== undefined) {
-      const emailError = validarEmail(email);
-      if (emailError) return res.status(400).json({ error: emailError });
-    }
 
-    const fields = [];
-    const values = [];
-    let idx = 1;
-    if (name !== undefined) {
-      fields.push(`name = $${idx++}`);
-      values.push(name);
+    if (name === undefined && email === undefined && bio === undefined) {
+      throw badRequest('No hay campos para actualizar');
     }
     if (email !== undefined) {
-      fields.push(`email = $${idx++}`);
-      values.push(email);
+      const emailErr = validarEmail(email);
+      if (emailErr) throw badRequest(emailErr);
+    }
+    if (name !== undefined) {
+      const nameErr = validarString(name, 'name', { maxLength: 100 });
+      if (nameErr) throw badRequest(nameErr);
     }
     if (bio !== undefined) {
-      fields.push(`bio = $${idx++}`);
-      values.push(bio);
+      const bioErr = validarString(bio, 'bio', { requerido: false, maxLength: 500 });
+      if (bioErr) throw badRequest(bioErr);
     }
-    values.push(req.params.id);
 
-    const query = `UPDATE authors SET ${fields.join(', ')} WHERE id = $${idx} RETURNING *`;
-    const { rows } = await pool.query(query, values);
-    if (!rows.length) {
-      return res.status(404).json({ error: 'Autor no encontrado' });
-    }
-    res.json(rows[0]);
+    const updated = await authorsService.update(id, {
+      name: name?.trim(),
+      email: email?.trim(),
+      bio,
+    });
+    if (!updated) throw notFound('Autor no encontrado');
+    res.json(updated);
   } catch (err) {
     if (err.code === '23505') {
-      return res.status(409).json({ error: 'El email ya existe' });
+      err.status = 409;
+      err.message = 'El email ya existe';
     }
     next(err);
   }
@@ -89,10 +94,9 @@ router.put('/:id', async (req, res, next) => {
 
 router.delete('/:id', async (req, res, next) => {
   try {
-    const { rows } = await pool.query('DELETE FROM authors WHERE id = $1 RETURNING *', [req.params.id]);
-    if (!rows.length) {
-      return res.status(404).json({ error: 'Autor no encontrado' });
-    }
+    const id = parseId(req.params.id);
+    const deleted = await authorsService.remove(id);
+    if (!deleted) throw notFound('Autor no encontrado');
     res.json({ message: 'Autor eliminado' });
   } catch (err) {
     next(err);

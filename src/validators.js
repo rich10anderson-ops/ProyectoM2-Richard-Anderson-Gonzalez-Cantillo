@@ -26,4 +26,35 @@ function validarEdad(edad) {
 module.exports = {
   validarEmail,
   validarEdad,
+  validarIdPositivo,
+  validarString,
+  validarBooleano,
 };
+
+function validarIdPositivo(valor, campo = 'id') {
+  const num = Number(valor);
+  if (!Number.isInteger(num) || num <= 0) {
+    return `${campo} debe ser un entero positivo`;
+  }
+  return null;
+}
+
+function validarString(valor, campo, { requerido = true, maxLength = 255, trim = true } = {}) {
+  if (valor === undefined || valor === null) {
+    return requerido ? `${campo} es requerido` : null;
+  }
+  const str = trim ? String(valor).trim() : String(valor);
+  if (requerido && str.length === 0) {
+    return `${campo} no puede estar vacio`;
+  }
+  if (str.length > maxLength) {
+    return `${campo} debe tener maximo ${maxLength} caracteres`;
+  }
+  return null;
+}
+
+function validarBooleano(valor, campo) {
+  if (valor === undefined || valor === null) return null; // opcional
+  if (typeof valor === 'boolean') return null;
+  return `${campo} debe ser booleano`;
+}

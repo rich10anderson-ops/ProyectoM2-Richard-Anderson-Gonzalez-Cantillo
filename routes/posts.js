@@ -1,20 +1,28 @@
 const express = require('express');
-const pool = require('../db/config');
+const { validarIdPositivo, validarString } = require('../src/validators');
+const { badRequest, notFound } = require('../src/errors');
+const postsService = require('../src/services/posts');
 
 const router = express.Router();
 
+function parseId(value, campo = 'id') {
+  const err = validarIdPositivo(value, campo);
+  if (err) throw badRequest(err);
+  return Number(value);
+}
+
+function parseBooleanOptional(value, campo = 'published') {
+  if (value === undefined) return undefined;
+  if (value === true || value === 'true' || value === 1 || value === '1') return true;
+  if (value === false || value === 'false' || value === 0 || value === '0') return false;
+  throw badRequest(`${campo} debe ser booleano`);
+}
+
 router.get('/', async (req, res, next) => {
   try {
-    const { published } = req.query;
-    let query = 'SELECT * FROM posts';
-    const values = [];
-    if (published !== undefined) {
-      values.push(published === 'true');
-      query += ' WHERE published = $1';
-    }
-    query += ' ORDER BY id';
-    const { rows } = await pool.query(query, values);
-    res.json(rows);
+    const published = parseBooleanOptional(req.query.published, 'published');
+    const posts = await postsService.list({ published });
+    res.json(posts);
   } catch (err) {
     next(err);
   }
@@ -22,10 +30,9 @@ router.get('/', async (req, res, next) => {
 
 router.get('/author/:authorId', async (req, res, next) => {
   try {
-    const { rows } = await pool.query('SELECT * FROM posts WHERE author_id = $1 ORDER BY id', [
-      req.params.authorId,
-    ]);
-    res.json(rows);
+    const authorId = parseId(req.params.authorId, 'author_id');
+    const posts = await postsService.listByAuthor(authorId);
+    res.json(posts);
   } catch (err) {
     next(err);
   }
@@ -33,11 +40,10 @@ router.get('/author/:authorId', async (req, res, next) => {
 
 router.get('/:id', async (req, res, next) => {
   try {
-    const { rows } = await pool.query('SELECT * FROM posts WHERE id = $1', [req.params.id]);
-    if (!rows.length) {
-      return res.status(404).json({ error: 'Post no encontrado' });
-    }
-    res.json(rows[0]);
+    const id = parseId(req.params.id);
+    const post = await postsService.findById(id);
+    if (!post) throw notFound('Post no encontrado');
+    res.json(post);
   } catch (err) {
     next(err);
   }
@@ -45,19 +51,29 @@ router.get('/:id', async (req, res, next) => {
 
 router.post('/', async (req, res, next) => {
   try {
-    const { title, content, author_id, published } = req.body;
-    if (!title || !content || !author_id) {
-      return res.status(400).json({ error: 'title, content y author_id son requeridos' });
-    }
+    const { title, content, author_id } = req.body;
+    const published = parseBooleanOptional(req.body.published, 'published') ?? false;
 
-    const { rows } = await pool.query(
-      'INSERT INTO posts (title, content, author_id, published) VALUES ($1, $2, $3, COALESCE($4, false)) RETURNING *',
-      [title, content, author_id, published],
-    );
-    res.status(201).json(rows[0]);
+    const titleErr = validarString(title, 'title', { maxLength: 200 });
+    if (titleErr) throw badRequest(titleErr);
+
+    const contentErr = validarString(content, 'content', { maxLength: 5000 });
+    if (contentErr) throw badRequest(contentErr);
+
+    const authorIdErr = validarIdPositivo(author_id, 'author_id');
+    if (authorIdErr) throw badRequest(authorIdErr);
+
+    const created = await postsService.create({
+      title: title.trim(),
+      content: content.trim(),
+      author_id: Number(author_id),
+      published,
+    });
+    res.status(201).json(created);
   } catch (err) {
     if (err.code === '23503') {
-      return res.status(400).json({ error: 'author_id no existe' });
+      err.status = 400;
+      err.message = 'author_id no existe';
     }
     next(err);
   }
@@ -65,41 +81,39 @@ router.post('/', async (req, res, next) => {
 
 router.put('/:id', async (req, res, next) => {
   try {
-    const { title, content, published, author_id } = req.body;
+    const id = parseId(req.params.id);
+    const { title, content, author_id } = req.body;
+    const published = parseBooleanOptional(req.body.published, 'published');
+
     if (title === undefined && content === undefined && published === undefined && author_id === undefined) {
-      return res.status(400).json({ error: 'No hay campos para actualizar' });
+      throw badRequest('No hay campos para actualizar');
     }
 
-    const fields = [];
-    const values = [];
-    let idx = 1;
     if (title !== undefined) {
-      fields.push(`title = $${idx++}`);
-      values.push(title);
+      const err = validarString(title, 'title', { maxLength: 200 });
+      if (err) throw badRequest(err);
     }
     if (content !== undefined) {
-      fields.push(`content = $${idx++}`);
-      values.push(content);
-    }
-    if (published !== undefined) {
-      fields.push(`published = $${idx++}`);
-      values.push(published);
+      const err = validarString(content, 'content', { maxLength: 5000 });
+      if (err) throw badRequest(err);
     }
     if (author_id !== undefined) {
-      fields.push(`author_id = $${idx++}`);
-      values.push(author_id);
+      const err = validarIdPositivo(author_id, 'author_id');
+      if (err) throw badRequest(err);
     }
-    values.push(req.params.id);
 
-    const query = `UPDATE posts SET ${fields.join(', ')} WHERE id = $${idx} RETURNING *`;
-    const { rows } = await pool.query(query, values);
-    if (!rows.length) {
-      return res.status(404).json({ error: 'Post no encontrado' });
-    }
-    res.json(rows[0]);
+    const updated = await postsService.update(id, {
+      title: title?.trim(),
+      content: content?.trim(),
+      published,
+      author_id: author_id !== undefined ? Number(author_id) : undefined,
+    });
+    if (!updated) throw notFound('Post no encontrado');
+    res.json(updated);
   } catch (err) {
     if (err.code === '23503') {
-      return res.status(400).json({ error: 'author_id no existe' });
+      err.status = 400;
+      err.message = 'author_id no existe';
     }
     next(err);
   }
@@ -107,10 +121,9 @@ router.put('/:id', async (req, res, next) => {
 
 router.delete('/:id', async (req, res, next) => {
   try {
-    const { rows } = await pool.query('DELETE FROM posts WHERE id = $1 RETURNING *', [req.params.id]);
-    if (!rows.length) {
-      return res.status(404).json({ error: 'Post no encontrado' });
-    }
+    const id = parseId(req.params.id);
+    const deleted = await postsService.remove(id);
+    if (!deleted) throw notFound('Post no encontrado');
     res.json({ message: 'Post eliminado' });
   } catch (err) {
     next(err);

@@ -10,6 +10,7 @@ const { validateEnv } = require('./config/validateEnv');
 const authorsRouter = require('./routes/authors');
 const postsRouter = require('./routes/posts');
 const commentsRouter = require('./routes/comments');
+const { errorHandler } = require('./src/errorHandler');
 
 const envPath = path.join(__dirname, '.env');
 if (fs.existsSync(envPath)) {
@@ -56,19 +57,7 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Ruta no encontrada' });
 });
 
-app.use((err, req, res, next) => {
-  console.error(err);
-  let status = err.status || 500;
-  let message = err.message || 'Error interno del servidor';
-
-  if (err.code === '42P01') {
-    message = 'Base de datos no inicializada. Ejecuta npm run db:setup';
-  } else if (err.code === 'ECONNREFUSED') {
-    message = 'No se pudo conectar a PostgreSQL. Revisa variables de entorno y servicio';
-  }
-
-  res.status(status).json({ error: message });
-});
+app.use(errorHandler);
 
 if (require.main === module) {
   const PORT = process.env.PORT || 3000;

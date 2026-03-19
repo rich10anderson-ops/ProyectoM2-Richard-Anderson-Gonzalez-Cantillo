@@ -7,6 +7,7 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "db:setup": "node db/run-sql.js db/setup.sql db/seed.sql",
+    "db:test": "NODE_ENV=test ENV_FILE=.env.test node db/run-sql.js db/setup.sql db/seed.sql",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage"
@@ -27,6 +28,7 @@
     "yamljs": "^0.3.0"
   },
   "devDependencies": {
+    "pg-mem": "^3.0.14",
     "supertest": "^7.2.2",
     "vitest": "^4.0.18"
   }
