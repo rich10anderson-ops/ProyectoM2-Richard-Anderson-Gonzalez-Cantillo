@@ -82,6 +82,3 @@ En esta etapa la IA se utilizo para detectar una causa puntual en los tests y su
 5. Usar la Internal URL para comunicacion entre servicios y la Public URL para clientes externos y `/api-docs`.
 
 
-### DATA "VARIABLES"
-
-- RAILWAY_PUBLIC_DOMAIN: proyectom2-richard-anderson-gonzalez-cantillo-production.up.railway.app
